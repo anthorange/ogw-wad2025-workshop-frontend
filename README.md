@@ -12,15 +12,11 @@
 2. Add your environment variables in the following format:
 
 ```
-VITE_API_GATEWAY=<URL to the Vonage API Gateway>
-VITE_CLIENT_ID=<as provisioned by Vonage>
 VITE_BACKEND_URL=<where you started your backend server at>
-VITE_NV_SCOPE="dpv:FraudPreventionAndDetection#number-verification-verify-read"
 ```
 
 - All environment variables used in the Vite app must be prefixed with `VITE_`.
 - You can create different files for different environments, e.g., `.env.development`, `.env.production`.
-- The Number Verification API requires the `dpv:FraudPreventionAndDetection#number-verification-verify-read` scope to be set in the `VITE_NV_SCOPE` variable, following the [CAMARA](https://github.com/camaraproject) standard scope.
 
 ## Running the App
 
