@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Box, Typography, TextField, InputAdornment, Button, Alert, IconButton, CircularProgress } from '@mui/material'
 import '@fontsource/inter/700.css'
 import '@fontsource/inter/400.css'
@@ -6,6 +6,7 @@ import './styles/App.css'
 import { Visibility, VisibilityOff } from '@mui/icons-material'
 import MockHome from './MockHome'
 import Prefix from './Prefix'
+import { v4 as randomUUID } from 'uuid'
 
 const GERMANY_PHONE_PREFIX = '+49'
 
@@ -21,6 +22,45 @@ const Signup = () => {
   const [verificationResult, setVerificationResult] = useState<boolean | undefined>()
   const [userAlreadyExists, setUserAlreadyExists] = useState<boolean>(false)
   const [signupCompleted, setSignupCompleted] = useState<boolean | undefined>()
+  const [networkRequestId, setNetworkRequestId] = useState<string | undefined>()
+  const [isNetworkAuthenticated, setIsNetworkAuthenticated] = useState<boolean>(false)
+
+  const networkAuthorize = useCallback(async () => {
+    if (!networkRequestId) return
+    try {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/authorize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: isPhoneNumber ? `${phonePrefix}${userId.trim()}` : userId.trim(),
+          state: networkRequestId,
+        }),
+      })
+      if (!response.ok) {
+        setVerificationResult(false)
+        setIsSubmitting(false)
+        return
+      }
+      const result = await response.json()
+      if (result?.auth_url) {
+        window.addEventListener('message', (event) => {
+          if (event.origin !== 'http://localhost:3000') return
+          const { status } = event.data
+          if (status === 'authorized') {
+            setIsNetworkAuthenticated(true)
+          }
+        })
+        window.open(result.auth_url, '_blank', 'location=yes,height=500,width=500')
+      } else {
+        throw new Error("auth_url not present")
+      }
+    } catch (err) {
+      console.error('Authorization failed:', err)
+      setIsNetworkAuthenticated(false)
+      setVerificationResult(false)
+      setIsSubmitting(false)
+    }
+  }, [isPhoneNumber, networkRequestId, phonePrefix, userId])
 
   const performSignup = useCallback(() => {
     setIsSubmitting(true)
@@ -79,12 +119,24 @@ const Signup = () => {
       })
       .finally(() => setIsSubmitting(false))
   }, [userId, isPhoneNumber, phonePrefix, messageVerificationCode])
+  
+  useEffect(() => {
+    if (!networkRequestId) return
+    if (isPhoneNumber && !isNetworkAuthenticated) {
+      networkAuthorize()
+    }
+    if (!isPhoneNumber && networkRequestId) {
+      performSignup()
+    }
+  }, [networkRequestId, isPhoneNumber, isNetworkAuthenticated])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
     if (verificationResult === false) {
       verifyMessageVerificationCode()
+    } else if (!isNetworkAuthenticated && isPhoneNumber) {
+      setNetworkRequestId(randomUUID())
     } else {
       performSignup()
     }
