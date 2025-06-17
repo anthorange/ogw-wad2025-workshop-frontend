@@ -37,6 +37,7 @@ const Signup = () => {
         }),
       })
       if (!response.ok) {
+        console.log('Authorization failed:', response)
         setVerificationResult(false)
         setIsSubmitting(false)
         return
@@ -63,8 +64,9 @@ const Signup = () => {
   }, [isPhoneNumber, networkRequestId, phonePrefix, userId])
 
   const performSignup = useCallback(() => {
+    const params = new URLSearchParams(networkRequestId ? { state: networkRequestId } : {})
     setIsSubmitting(true)
-    fetch(`${import.meta.env.VITE_BACKEND_URL}/signup`, {
+    fetch(`${import.meta.env.VITE_BACKEND_URL}/signup?${params.toString()}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -90,7 +92,7 @@ const Signup = () => {
         setSignupCompleted(false)
       })
       .finally(() => setIsSubmitting(false))
-  }, [isPhoneNumber, userId, phonePrefix, password])
+  }, [isPhoneNumber, networkRequestId, userId, phonePrefix, password])
 
   const verifyMessageVerificationCode = useCallback(() => {
     if (!messageVerificationCode.trim()) return
@@ -129,7 +131,13 @@ const Signup = () => {
       performSignup()
     }
   }, [networkRequestId, isPhoneNumber, isNetworkAuthenticated])
-
+  
+  useEffect(() => {
+    if (isNetworkAuthenticated) {
+      performSignup()
+    }
+  }, [isNetworkAuthenticated])
+  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
