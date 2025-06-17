@@ -27,33 +27,46 @@ const Signup = () => {
 
   const networkAuthorize = useCallback(async () => {
     if (!networkRequestId) return
-    const params = new URLSearchParams({
-      response_type: 'code',
-      client_id: import.meta.env.VITE_CLIENT_ID,
-      scope: import.meta.env.VITE_NV_SCOPE,
-      redirect_uri: `${import.meta.env.VITE_BACKEND_URL}/callback`,
-      state: networkRequestId!,
-    })
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_GATEWAY}/authorize?${params.toString()}`, {
-        method: 'GET',
-        redirect: 'follow',
-        headers: { 'Content-Type': 'application/json' }
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/authorize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: isPhoneNumber ? `${phonePrefix}${userId.trim()}` : userId.trim(),
+          state: networkRequestId,
+        }),
       })
-      setIsNetworkAuthenticated(response.status === 201)
       if (!response.ok) {
+        console.log('Authorization failed:', response)
         setVerificationResult(false)
         setIsSubmitting(false)
+        return
       }
-    } catch {
+      const result = await response.json()
+      if (result?.auth_url) {
+        window.addEventListener('message', (event) => {
+          if (event.origin !== 'http://localhost:3000') return
+          const { status } = event.data
+          if (status === 'authorized') {
+            setIsNetworkAuthenticated(true)
+          }
+        })
+        window.open(result.auth_url, '_blank', 'location=yes,height=500,width=500')
+      } else {
+        throw new Error("auth_url not present")
+      }
+    } catch (err) {
+      console.error('Authorization failed:', err)
+      setIsNetworkAuthenticated(false)
       setVerificationResult(false)
       setIsSubmitting(false)
     }
-  }, [networkRequestId])
+  }, [isPhoneNumber, networkRequestId, phonePrefix, userId])
 
   const performSignup = useCallback(() => {
+    const params = new URLSearchParams(networkRequestId ? { state: networkRequestId } : {})
     setIsSubmitting(true)
-    fetch(`${import.meta.env.VITE_BACKEND_URL}/signup`, {
+    fetch(`${import.meta.env.VITE_BACKEND_URL}/signup?${params.toString()}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -79,7 +92,7 @@ const Signup = () => {
         setSignupCompleted(false)
       })
       .finally(() => setIsSubmitting(false))
-  }, [isPhoneNumber, userId, phonePrefix, password])
+  }, [isPhoneNumber, networkRequestId, userId, phonePrefix, password])
 
   const verifyMessageVerificationCode = useCallback(() => {
     if (!messageVerificationCode.trim()) return
@@ -118,7 +131,13 @@ const Signup = () => {
       performSignup()
     }
   }, [networkRequestId, isPhoneNumber, isNetworkAuthenticated])
-
+  
+  useEffect(() => {
+    if (isNetworkAuthenticated) {
+      performSignup()
+    }
+  }, [isNetworkAuthenticated])
+  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
