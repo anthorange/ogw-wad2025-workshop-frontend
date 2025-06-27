@@ -27,25 +27,40 @@ const Signup = () => {
 
   const networkAuthorize = useCallback(async () => {
     if (!networkRequestId) return
-    const params = new URLSearchParams({
-      response_type: 'code',
-      client_id: import.meta.env.VITE_CLIENT_ID,
-      scope: import.meta.env.VITE_NV_SCOPE,
-      redirect_uri: `${import.meta.env.VITE_BACKEND_URL}/callback`,
-      state: networkRequestId!,
-    })
+
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_GATEWAY}/authorize?${params.toString()}`, {
-        method: 'GET',
-        redirect: 'follow',
-        headers: { 'Content-Type': 'application/json' }
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: isPhoneNumber ? `${phonePrefix}${userId.trim()}` : userId.trim(),
+          state: networkRequestId,
+        }),
       })
-      setIsNetworkAuthenticated(response.status === 201)
+
       if (!response.ok) {
         setVerificationResult(false)
         setIsSubmitting(false)
+        return
       }
-    } catch {
+
+      const result = await response.json()
+      if (result?.auth_url) {
+        window.addEventListener('message', (event) => {
+          if (event.origin !== 'http://localhost:3000') return
+
+          const { status } = event.data
+          if (status === 'authorized') {
+            setIsNetworkAuthenticated(true)
+          }
+        })
+        window.open(result.auth_url, '_blank', 'location=yes,height=500,width=500')
+      } else {
+        throw new Error("auth_url not present")
+      }
+
+    } catch (err) {
+      console.error('Authorization failed:', err)
       setVerificationResult(false)
       setIsSubmitting(false)
     }
@@ -127,7 +142,7 @@ const Signup = () => {
   }, [isNetworkAuthenticated])
   
   useEffect(() => {
-    if (verificationResult === false && networkRequestId && isPhoneNumber) {
+    if (verificationResult === false && networkRequestId && isPhoneNumber && isNetworkAuthenticated) {
       performSignup()
     }
   }, [verificationResult, networkRequestId, isPhoneNumber])

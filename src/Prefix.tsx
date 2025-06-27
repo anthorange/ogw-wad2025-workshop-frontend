@@ -2,13 +2,14 @@ import { useState } from 'react'
 import { InputAdornment, IconButton, Menu, MenuItem } from '@mui/material'
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
 
-const EUROPEAN_PHONE_PREFIXES = ['+49', '+34', '+33', '+44']
+const EUROPEAN_PHONE_PREFIXES = ['+49', '+34', '+33', '+44', '+99']
 
 const PREFIX_FLAGS: Record<string, string> = {
   '+49': '🇩🇪', // Germany
   '+34': '🇪🇸', // Spain
   '+33': '🇫🇷', // France
   '+44': '🇬🇧', // United Kingdom
+  '+99': '🌍', // Virtual operator
 }
 
 interface PrefixProps {
