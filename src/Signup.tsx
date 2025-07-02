@@ -44,9 +44,10 @@ const Signup = () => {
       const result = await response.json()
       if (result?.auth_url) {
         window.addEventListener('message', (event) => {
-          if (event.origin !== 'http://localhost:3000') return
+          if (event.origin !== import.meta.env.VITE_BACKEND_URL) return
           const { status } = event.data
           if (status === 'authorized') {
+            console.log("Authorized successfully")
             setIsNetworkAuthenticated(true)
           }
         })
@@ -129,7 +130,13 @@ const Signup = () => {
       performSignup()
     }
   }, [networkRequestId, isPhoneNumber, isNetworkAuthenticated])
-
+  
+  useEffect(() => {
+    if (isNetworkAuthenticated === true) {
+      performSignup()
+    }
+  }, [isNetworkAuthenticated])
+  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
