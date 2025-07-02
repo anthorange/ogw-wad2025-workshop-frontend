@@ -91,7 +91,7 @@ const Signup = () => {
         setSignupCompleted(false)
       })
       .finally(() => setIsSubmitting(false))
-  }, [isPhoneNumber, userId, phonePrefix, password])
+  }, [isPhoneNumber, userId, phonePrefix, password, networkRequestId])
 
   const verifyMessageVerificationCode = useCallback(() => {
     if (!messageVerificationCode.trim()) return
