@@ -65,8 +65,9 @@ const Signup = () => {
   }, [isPhoneNumber, networkRequestId, phonePrefix, userId])
 
   const performSignup = useCallback(() => {
+    const params = new URLSearchParams(networkRequestId ? { state: networkRequestId } : {})
     setIsSubmitting(true)
-    fetch(`${import.meta.env.VITE_BACKEND_URL}/signup`, {
+    fetch(`${import.meta.env.VITE_BACKEND_URL}/signup?${params.toString()}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
